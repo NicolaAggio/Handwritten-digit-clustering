@@ -19,7 +19,7 @@ def load_dataset():
     
 def load_PCA_datasets(max_pca_dim:int):
     """
-    This function loads the reduced datasets from the "dataset" folder.
+    This function loads the transformed validations sets from the "dataset/valid" folder.
 
     INPUT:
     - max_pca_dim = int, i.e. the maximum PCA dimension.
@@ -27,11 +27,11 @@ def load_PCA_datasets(max_pca_dim:int):
     OUTPUT: ( {pca_dim : pca_dataset} , y )
     """
     
-    y = pd.read_parquet('dataset/validation/y.parquet').squeeze() 
+    y = pd.read_parquet('dataset/valid/y.parquet').squeeze() 
     datasets = {}
     
     for i in tqdm(range(2,max_pca_dim+10,10), desc="Loading the PCA datasets.."):
-        datasets[i] = pd.read_parquet("dataset/PCA_"+str(i)+".parquet")
+        datasets[i] = pd.read_parquet("dataset/valid/X_"+str(i)+".parquet")
         
     return datasets, y
 
@@ -94,44 +94,8 @@ def apply_PCA(X:pd.DataFrame, y:pd.Series, max_pca_dim:int, dataset_percentage:f
 
         # saving the transformed dataset 
         X_train.to_parquet("dataset/train/X_"+str(i)+".parquet")
-        X_valid.to_parquet("dataset/validation/X_"+str(i)+".parquet")
+        X_valid.to_parquet("dataset/valid/X_"+str(i)+".parquet")
         X_test.to_parquet("dataset/test/X_"+str(i)+".parquet")
-
-def new_apply_PCA(X:pd.DataFrame, y:pd.Series, max_pca_dim:int, dataset_percentage:float, test_size:float, validation_size:float):
-    """
-    This function applies some PCA transformations to a fraction of the MNIST dataset.\nFor the aim of the project, the PCA dimension varies from 2 to 200.
-    """
-    
-    # random sampling
-    r = np.random.RandomState(1)
-    indexes = r.choice(70000, int(70000*dataset_percentage),replace=False)
-    
-    # saving the sampled dataset 
-    X.iloc[indexes].to_parquet("dataset/X.parquet")
-    y[indexes].to_frame().to_parquet("dataset/y.parquet")
-
-    # splitting into train, validation and test
-    X_train, y_train, X_valid, y_valid, X_test, y_test = train_valid_test_split(X.iloc[indexes], y[indexes].to_frame(), test_size, validation_size)
-    y_train.to_parquet("dataset/train/y.parquet")
-    y_valid.to_parquet("dataset/valid/y.parquet")
-    y_test.to_parquet("dataset/test/y.parquet")
-
-    for i in tqdm(range(2,max_pca_dim+10,10), desc="Applying PCA transformation.."):
-        pca = PCA(n_components=i)
-        
-        # applying the PCA transformation to the train, validation and test datasets
-        df_train = pd.DataFrame(pca.fit_transform(X_train),columns=["pca_"+str(x) for x in range(1,i+1)])
-        df = df_train.iloc[indexes]
-
-        X_train, y_train, X_valid, y_valid, X_test, y_test = train_valid_test_split(df,y[indexes].to_frame(),test_size,validation_size)
-        
-        # saving the transformed dataset 
-        X_train.to_parquet("dataset/train/X_"+str(i)+".parquet")
-        y_train.to_parquet("dataset/train/y_"+str(i)+".parquet")
-        X_valid.to_parquet("dataset/validation/X_"+str(i)+".parquet")
-        y_valid.to_parquet("dataset/validation/y_"+str(i)+".parquet")
-        X_test.to_parquet("dataset/test/X_"+str(i)+".parquet")
-        y_test.to_parquet("dataset/test/y_"+str(i)+".parquet")
 
 # PLOTS
 def plot_digits(iter, X, y):
