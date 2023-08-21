@@ -175,11 +175,11 @@ def save_results(model_name:str, results:Dict[int,pd.DataFrame], best_indexes:Di
     with open(model_name+"/timings.pkl", 'wb') as out:
         pickle.dump(timings, out, pickle.HIGHEST_PROTOCOL)
 
-def tune_model(name:str):
+def tune_model(name:str, max_pca_dim:int):
     n_jobs = -1
 
     # loading the PCA transformed datasets
-    datasets, y = load_PCA_datasets(PCA)
+    datasets, y = load_PCA_datasets(max_pca_dim)
 
     match name:
         case "GaussianMixture":

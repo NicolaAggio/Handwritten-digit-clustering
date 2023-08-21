@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
 from tqdm import tqdm
@@ -26,18 +27,13 @@ def load_PCA_datasets(max_pca_dim:int):
     OUTPUT: ( {pca_dim : pca_dataset} , y )
     """
     
-    y = pd.read_parquet('dataset/y.parquet').squeeze() 
+    y = pd.read_parquet('dataset/validation/y.parquet').squeeze() 
     datasets = {}
     
     for i in tqdm(range(2,max_pca_dim+10,10), desc="Loading the PCA datasets.."):
         datasets[i] = pd.read_parquet("dataset/PCA_"+str(i)+".parquet")
         
     return datasets, y
-
-# SAVING
-def save_X_y(X,y):
-    X.to_parquet("dataset/X.parquet")
-    y.to_parquet("dataset/y.parquet")
 
 # PRE-PROCESSING
 def train_valid_test_split(X:pd.DataFrame, y:pd.Series, test_size:float, validation_size:float):
@@ -64,7 +60,7 @@ def train_valid_test_split(X:pd.DataFrame, y:pd.Series, test_size:float, validat
 
     return X_train, y_train, X_valid, y_valid, X_test, y_test
 
-def apply_PCA(X:pd.DataFrame, y:pd.Series, pca_dim:int, dataset_percentage:float, test_size:float, validation_size:float):
+def apply_PCA(X:pd.DataFrame, y:pd.Series, max_pca_dim:int, dataset_percentage:float, test_size:float, validation_size:float):
     """
     This function applies some PCA transformations to a fraction of the MNIST dataset.\nFor the aim of the project, the PCA dimension varies from 2 to 200.
     """
@@ -74,14 +70,58 @@ def apply_PCA(X:pd.DataFrame, y:pd.Series, pca_dim:int, dataset_percentage:float
     indexes = r.choice(70000, int(70000*dataset_percentage),replace=False)
     
     # saving the sampled dataset 
-    save_X_y(X.iloc[indexes], y[indexes].to_frame())
-    
-    for i in tqdm(range(2,pca_dim+10,10), desc="Applying PCA transformation.."):
+    X.iloc[indexes].to_parquet("dataset/X.parquet")
+    y[indexes].to_frame().to_parquet("dataset/y.parquet")
+
+    for i in tqdm(range(2,max_pca_dim+10,10), desc="Applying PCA transformation.."):
         pca = PCA(n_components=i)
         
         # applying the PCA transformation to the sampled dataset
         df = pd.DataFrame(pca.fit_transform(X),columns=["pca_"+str(x) for x in range(1,i+1)])
         df = df.iloc[indexes]
+
+        X_train, y_train, X_valid, y_valid, X_test, y_test = train_valid_test_split(df,y[indexes].to_frame(),test_size,validation_size)
+        
+        # saving the label vectors
+        if not Path("dataset/train/y.parquet").is_file():
+            y_train.to_parquet("dataset/train/y.parquet")
+
+        if not Path("dataset/valid/y.parquet").is_file():
+            y_valid.to_parquet("dataset/valid/y.parquet")
+
+        if not Path("dataset/test/y.parquet").is_file():
+            y_test.to_parquet("dataset/test/y.parquet")
+
+        # saving the transformed dataset 
+        X_train.to_parquet("dataset/train/X_"+str(i)+".parquet")
+        X_valid.to_parquet("dataset/validation/X_"+str(i)+".parquet")
+        X_test.to_parquet("dataset/test/X_"+str(i)+".parquet")
+
+def new_apply_PCA(X:pd.DataFrame, y:pd.Series, max_pca_dim:int, dataset_percentage:float, test_size:float, validation_size:float):
+    """
+    This function applies some PCA transformations to a fraction of the MNIST dataset.\nFor the aim of the project, the PCA dimension varies from 2 to 200.
+    """
+    
+    # random sampling
+    r = np.random.RandomState(1)
+    indexes = r.choice(70000, int(70000*dataset_percentage),replace=False)
+    
+    # saving the sampled dataset 
+    X.iloc[indexes].to_parquet("dataset/X.parquet")
+    y[indexes].to_frame().to_parquet("dataset/y.parquet")
+
+    # splitting into train, validation and test
+    X_train, y_train, X_valid, y_valid, X_test, y_test = train_valid_test_split(X.iloc[indexes], y[indexes].to_frame(), test_size, validation_size)
+    y_train.to_parquet("dataset/train/y.parquet")
+    y_valid.to_parquet("dataset/valid/y.parquet")
+    y_test.to_parquet("dataset/test/y.parquet")
+
+    for i in tqdm(range(2,max_pca_dim+10,10), desc="Applying PCA transformation.."):
+        pca = PCA(n_components=i)
+        
+        # applying the PCA transformation to the train, validation and test datasets
+        df_train = pd.DataFrame(pca.fit_transform(X_train),columns=["pca_"+str(x) for x in range(1,i+1)])
+        df = df_train.iloc[indexes]
 
         X_train, y_train, X_valid, y_valid, X_test, y_test = train_valid_test_split(df,y[indexes].to_frame(),test_size,validation_size)
         
