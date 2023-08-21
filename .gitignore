@@ -1,10 +1,7 @@
 __pycache__
 .ipynb_checkpoints
 dataset/
-model/
-models/
-notebooks/
-todo.txt
 GaussianMixture/
 MeanShift/
 NormalizedCut/
+old/
