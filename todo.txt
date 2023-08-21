@@ -1,3 +1,8 @@
-plot dei clusters in 2d
-plot delle immagini per ogni cluster
-dimensione del dataset originale..ora è 40%, vedere se è fattibili aumentarla
+- plot dei clusters in 2d
+- plot delle immagini per ogni cluster
+- dimensione del dataset originale..ora è 40%, vedere se è fattibili aumentarla
+- plot della media (vedi Lotto)
+
+REPORT
+- approfondire meglio PCA (vedi Lotto);
+- 
