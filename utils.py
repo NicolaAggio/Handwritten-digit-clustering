@@ -19,21 +19,24 @@ def load_dataset():
     
 def load_PCA_datasets(max_pca_dim:int):
     """
-    This function loads the transformed validations sets from the "dataset/valid" folder.
+    This function loads the transformed validation and training datasets from the "dataset/valid" and "dataset/train" folders.
 
     INPUT:
     - max_pca_dim = int, i.e. the maximum PCA dimension.
 
-    OUTPUT: ( {pca_dim : pca_dataset} , y )
+    OUTPUT: ( {pca_dim : pca_dataset} , y ) for validation and train.
     """
     
-    y = pd.read_parquet('dataset/valid/y.parquet').squeeze() 
-    datasets = {}
+    y_valid = pd.read_parquet('dataset/valid/y.parquet').squeeze() 
+    y_train = pd.read_parquet('dataset/train/y.parquet').squeeze() 
+    datasets_valid = {}
+    datasets_train = {}
     
     for i in tqdm(range(2,max_pca_dim+10,10), desc="Loading the PCA datasets.."):
-        datasets[i] = pd.read_parquet("dataset/valid/X_"+str(i)+".parquet")
+        datasets_valid[i] = pd.read_parquet("dataset/valid/X_" + str(i) + ".parquet")
+        datasets_train[i] = pd.read_parquet("dataset/train/X_" + str(i) + ".parquet")
         
-    return datasets, y
+    return datasets_valid, datasets_train, y_valid, y_train
 
 # PRE-PROCESSING
 def train_valid_test_split(X:pd.DataFrame, y:pd.Series, test_size:float, validation_size:float):

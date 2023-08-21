@@ -4,3 +4,7 @@ dataset/
 model/
 models/
 notebooks/
+todo.txt
+GaussianMixture/
+MeanShift/
+NormalizedCut/
