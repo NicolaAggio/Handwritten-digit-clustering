@@ -1,121 +1,105 @@
-import os
-from os import path
+"""
+This file contains the functions for loading, saving and pre-processing the MNIST dataset, along with some functions fol plotting the digits of the dataset etc..
+"""
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
 
-# Directories
+from sklearn.model_selection import train_test_split
+from sklearn.decomposition import PCA
+from tqdm import tqdm
 
-def makedir(path_: str):
+# LOADING
+def load_dataset():
+    X = pd.read_parquet('dataset/X.parquet')
+    y = pd.read_parquet('dataset/y.parquet').squeeze() 
+
+    return X,y
+    
+def load_PCA_datasets(max_pca_dim:int):
     """
-    Creates a directory (if the directory does not exist)
-    :param path_: path of directory to be logged
+    This function loads the reduced datasets from the "dataset" folder.
+
+    INPUT:
+    - max_pca_dim = int, i.e. the maximum PCA dimension.
+
+    OUTPUT: ( {pca_dim : pca_dataset} , y )
     """
-    try:
-        os.makedirs(path_)
-        print(f"Created directory {path_} !")
-    except OSError:
-        pass
+    
+    y = pd.read_parquet('dataset/y.parquet').squeeze() 
+    datasets = {}
+    
+    for i in tqdm(range(2,max_pca_dim+10,10), desc="Loading the PCA datasets.."):
+        datasets[i] = pd.read_parquet("dataset/PCA_"+str(i)+".parquet")
+        
+    return datasets, y
 
-def get_root_dir() -> str:
+# SAVING
+def save_X_y(X,y):
+    X.to_parquet("dataset/X.parquet")
+    y.to_parquet("dataset/y.parquet")
+
+# PRE-PROCESSING
+def train_valid_test_split(X:pd.DataFrame, y:pd.Series, test_size:float, validation_size:float):
     """
-    :return: path to root directory
-    """
-    return str(path.abspath(path.join(__file__, "../")))
+    This function performs a train-validation-test split of the dataset.
+    
+    INPUT:
+    - X, i.e. the feature vector;
+    - y, i.e. the label vector;
+    - test_size, i.e. the size of the test set;
+    - validation_size, i.e. the size of the validation set.
 
-def get_dataset_dir() -> str:
-    """
-    :return: path to dataset directory
-    """
-    return path.join(get_root_dir(), "datasets")
-
-# Plots
-
-def plot_digit(pixels: np.array, save: bool = False,
-               file_name: str = "digit"):
-    """
-    Plot a figure given a square matrix array, each cell represent a grey-scale pixel with intensity 0-1
-    :param pixels: intensity of pixels
-    :param save: true for storing the image
-    :param file_name: name file if stored
-    """
-
-    fig, ax = plt.subplots(1)
-    pixels = chunks(lst=pixels, n=SIZE)
-    ax.imshow(pixels, cmap=plt.cm.gray_r, interpolation="nearest")
-    ax.set_yticklabels([])
-    ax.set_xticklabels([])
-
-    if save:
-        file = path.join(get_images_dir(), f"{file_name}.{IMG_EXT}")
-        makedir(get_images_dir())
-        print(f"Saving {file}..")
-        plt.savefig(file)  
-
-    plt.show()
-
-def plot_mean_digit(X: pd.DataFrame, save: bool = False,
-                    file_name: str = "mean_digit"):
-    """
-    Plots the average figure of a certain number of images
-    :param X: set of images
-    :param save: if true, image is stored
-    :param file_name: name of file if stored
-    """
-
-    pixels = np.mean(X, axis=0)
-    plot_digit(pixels=pixels, save=save, file_name=file_name)
-
-def digits_histogram(labels: pd.DataFrame | np.ndarray,
-                     save: bool = False, file_name: str = "plot"):
-    """
-    Plot distribution of labels in a dataset given its labels
-
-    :param labels: collection with labels
-    :param save: if true, the image is stored in the directory
-    :param file_name: name of file if stored (including extension)
+    OUTPUT:
+    - X_train, i.e. the feature vector for the training phase;
+    - y_train, i.e. the label vector for the training phase;
+    - X_valid, i.e. the feature vector for the validation phase;
+    - y_valid, i.e. the label vector for the validation phase;
+    - X_test, i.e. the feature vector for the testing phase;
+    - y_test, i.e. the label vector for the testing phase.
     """
 
-    # type-check and casting
-    if type(labels) == np.ndarray:
-        labels = pd.DataFrame(labels)
+    X_train_80, X_test, y_train_80, y_test = train_test_split(X, y, test_size = test_size, random_state = 1)
+    X_train, X_valid , y_train, y_valid = train_test_split(X_train_80, y_train_80, test_size = validation_size, random_state = 1)
 
-    # digits count
-    digits: Dict[str, int] = {
-        k[0]: v for k, v in labels.value_counts().to_dict().items()
-    }
+    return X_train, y_train, X_valid, y_valid, X_test, y_test
 
-    # plot
-    fig, ax = plt.subplots(1)
-    ax.bar(list(digits.keys()), digits.values(), edgecolor='black')
-    ax.set_xticks(range(10))
-    ax.set_title('Digits distribution')
-    ax.set_xlabel('Classes')
-    ax.set_ylabel('Counts')
-
-    if save:
-        file = path.join(get_images_dir(), f"{file_name}.{IMG_EXT}")
-        makedir(get_dataset_dir())
-        print(f"Saving {file}..")
-        plt.savefig(file)  
-
-    plt.show()
-
-def plot_cluster_frequencies_histo(frequencies: Dict[int, int], save: bool = False, file_name: str = 'frequencies'):
+def apply_PCA(X:pd.DataFrame, y:pd.Series, pca_dim:int, dataset_percentage:float, test_size:float, validation_size:float):
     """
-    Plot clusters frequencies in a histogram
-    :save: if to save the graph to images directory
-    :file_name: name of stored file
+    This function applies some PCA transformations to a fraction of the MNIST dataset.\nFor the aim of the project, the PCA dimension varies from 2 to 200.
     """
-    fig, ax = plt.subplots(1)
+    
+    # random sampling
+    r = np.random.RandomState(1)
+    indexes = r.choice(70000, int(70000*dataset_percentage),replace=False)
+    
+    # saving the sampled dataset 
+    save_X_y(X.iloc[indexes], y[indexes].to_frame())
+    
+    for i in tqdm(range(2,pca_dim+10,10), desc="Applying PCA transformation.."):
+        pca = PCA(n_components=i)
+        
+        # applying the PCA transformation to the sampled dataset
+        df = pd.DataFrame(pca.fit_transform(X),columns=["pca_"+str(x) for x in range(1,i+1)])
+        df = df.iloc[indexes]
 
-    ax.bar(list(frequencies.keys()), frequencies.values(), edgecolor='black')
+        X_train, y_train, X_valid, y_valid, X_test, y_test = train_valid_test_split(df,y[indexes].to_frame(),test_size,validation_size)
+        
+        # saving the transformed dataset 
+        X_train.to_parquet("dataset/train/X_"+str(i)+".parquet")
+        y_train.to_parquet("dataset/train/y_"+str(i)+".parquet")
+        X_valid.to_parquet("dataset/validation/X_"+str(i)+".parquet")
+        y_valid.to_parquet("dataset/validation/y_"+str(i)+".parquet")
+        X_test.to_parquet("dataset/test/X_"+str(i)+".parquet")
+        y_test.to_parquet("dataset/test/y_"+str(i)+".parquet")
 
-    # Title and axes
-    ax.set_title('Clusters cardinality')
-    ax.set_xlabel('Cluster dimension')
-    ax.set_ylabel('Occurrences')
-
-    if save:
-        makedir(get_images_dir())
-        out_file = path.join(get_images_dir(), f"{file_name}.{IMG_EXT}")
-        print(f"Saving {out_file}..")
-        plt.savefig(out_file)
-    plt.show()
+# PLOTS
+def plot_digits(iter, X, y):
+    fig, axs = plt.subplots(10, iter=15)
+    
+    for digit in range(10):
+        for x in range(iter):
+            digit_index = y[y == digit].index[x]
+            digit_pixels = np.array(X.iloc[digit_index]).reshape(28, 28)
+            axs[digit,x].imshow(digit_pixels)
+            axs[digit,x].axis('off')

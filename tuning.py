@@ -1,24 +1,22 @@
 """
-This file contains some important function for tuning the hyperparameters of the clustering models.
+This file contains the functions for tuning the hyperparameters of each of the clustering models.
 """
-
 import pandas as pd
 import time
 import copy
 import os
 import pickle
 
-from settings import PCA
 from typing import Union, List, Tuple, Dict
 from sklearn.mixture import GaussianMixture
 from sklearn.cluster import MeanShift, SpectralClustering
 from sklearn.metrics.cluster import rand_score
 from tqdm.notebook import tqdm
-from new_utils import load_PCA_datasets
+from utils import load_PCA_datasets
 
 def score_calculation(model: Union[GaussianMixture, MeanShift, SpectralClustering], X:pd.DataFrame, y:pd.Series, hyperparameter_name:str, hyperparameter_val:Union[int,float]):
     """
-    This function fits each model with the given hyperparameter value and calculates the rand score.
+    This function fits each of the clustering model with different values for the given hyperparamater, and finally calculates the rand score.
 
     INPUT:
     - model, i.e the model to use;
@@ -31,13 +29,12 @@ def score_calculation(model: Union[GaussianMixture, MeanShift, SpectralClusterin
     - hyperparameter value (int|float);
     - number of clusters, only for the MeanShift algorithm (int);
     - rand score (float);
-
     """
     
     # fitting the model
     model = model.set_params(**{hyperparameter_name:hyperparameter_val})
-    cluster_labels = model.fit_predict(X)
-    score = rand_score(y, cluster_labels)
+    labels = model.fit_predict(X)
+    score = rand_score(y, labels)
     
     if isinstance(model, MeanShift):
         return (hyperparameter_val, model.cluster_centers_.shape[0], score)
@@ -57,8 +54,8 @@ def hyperparameter_tuning(desc:str, model: Union[GaussianMixture, MeanShift, Spe
     - y, i.e. the label vector;
 
     OUTPUT: 
-    - result (pd.DataFrame), i.e. a DataFrame containing, for each of the possible values of the hyperparameter to tune, the results of the trained model;
-    - best_result_index (int), i.e. the index of the hyperparameter value which corresponds to the best rand score;
+    - result, i.e. a DataFrame containing, for each of the possible values of the hyperparameter to tune, the results of the trained model;
+    - best_result_index, i.e. the index of the hyperparameter value which corresponds to the best rand score;
     - fitted_model, i.e. the model trained with the best hyperparamter value;
     - elapsed, i.e. the elapsded time for the training phase.
     """
