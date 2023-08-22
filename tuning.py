@@ -3,7 +3,6 @@ This file contains the functions for tuning the hyperparameters of each of the c
 """
 import pandas as pd
 import time
-import copy
 import os
 import pickle
 
@@ -27,9 +26,9 @@ def evaluate_model(model: Union[GaussianMixture, MeanShift, SpectralClustering],
     - hyperparameter_val, i.e. the hyperparameter value.
 
     OUTPUT:
-    - hyperparameter value (int|float);
-    - number of clusters, only for the MeanShift algorithm (int);
-    - rand score (float);
+    - hyperparameter value;
+    - number of clusters (only for the MeanShift algorithm);
+    - rand score;
     """
     
     # fitting the model
@@ -58,9 +57,9 @@ def tune_hyperparameter(desc:str, model: Union[GaussianMixture, MeanShift, Spect
 
     OUTPUT: 
     - result, i.e. a DataFrame containing, for each of the possible values of the hyperparameter to tune, the results of the trained model (number of clusters and rand score);
-    - best_result_index, i.e. the index of the hyperparameter value which corresponds to the best rand score;
+    - best_index, i.e. the index of the hyperparameter value which corresponds to the best rand score;
     - fitted_model, i.e. the model trained with the best hyperparamter value;
-    - elapsed, i.e. the elapsded time for the training phase.
+    - training_time, i.e. the training time.
     """
 
     result = []
@@ -78,15 +77,14 @@ def tune_hyperparameter(desc:str, model: Union[GaussianMixture, MeanShift, Spect
     result = pd.DataFrame(result, columns=columns)
 
     # selecting the index of the value for which the rand score is maximum
-    best_rand_index = result.index[result["rand_score"]==result["rand_score"].max()].to_list()[0]
+    best_index = result.index[result["rand_score"]==result["rand_score"].max()].to_list()[0]
 
     # fitting the model
     start = time.time()
-    fitted_model = model.set_params(**{hyperparameter_name:result[hyperparameter_name].iloc[best_rand_index].squeeze()}).fit(X_train)
-    end = time.time()
-    elapsed = end-start
+    fitted_model = model.set_params(**{hyperparameter_name:result[hyperparameter_name].iloc[best_index].squeeze()}).fit(X_train)
+    training_time = time.time() - start
     
-    return result, best_rand_index, fitted_model, elapsed
+    return result, best_index, fitted_model, training_time
 
 def get_results(datasets_train:Dict[int, pd.DataFrame], datasets_valid:Dict[int, pd.DataFrame], y_valid:pd.Series, model:Union[GaussianMixture, MeanShift, SpectralClustering], hyperparameter_name:str, hyperparameter_values:List[Union[float, int]]):
     """
@@ -100,20 +98,27 @@ def get_results(datasets_train:Dict[int, pd.DataFrame], datasets_valid:Dict[int,
     - hyperparameter_name, i.e. the hyperparameter to tune.
     - hyperparameter_values, i.e. the list of all the possible values of the specified parameter.
 
-    OUTPUT:
+    OUTPUT: {PCA_dim : (best_index, fitted_model, training_time)}, where:
+    - result is a DataFrame containing, for each of the possible values of the hyperparameter to tune, the results of the trained model (number of clusters and rand score);
+    - best_index represents the index of the hyperparameter value which corresponds to the best rand score;
+    - fitted_model represents the model trained with the best hyperparamter value;
+    - training_time represents the training time.
+
     - results = {PCA dimension, result dataframe for this dimension};
     - best_indexes = {PCA dimension, best result index for the result dataframe for this dimension};
     - fitted_estimator = {PCA dimension, fitted model with the best hyperparameter for this dimension};
     - timings = {PCA dimension, fitting time for the best model for this dimension}.
     """
     
-    results = {}
-    best_indexes = {}
-    fitted_estimators = {}
-    timings = {}
+    res = {int:tuple}
+    # results = {}
+    # best_indexes = {}
+    # fitted_estimators = {}
+    # timings = {}
     
+    # recall: datasets_train.keys() = [pca_dim1, ..]
     for dim in tqdm(datasets_train.keys()):
-        results[dim],best_indexes[dim],fitted_estimator,timings[dim]=tune_hyperparameter("Tuning " + hyperparameter_name + " with PCA = "+str(dim)+"..",
+        res[dim] = tune_hyperparameter("Tuning " + hyperparameter_name + " with PCA = " + str(dim) + "..",
                                                                                             model,
                                                                                             hyperparameter_name,
                                                                                             hyperparameter_values,
@@ -121,30 +126,58 @@ def get_results(datasets_train:Dict[int, pd.DataFrame], datasets_valid:Dict[int,
                                                                                             datasets_valid[dim], 
                                                                                             y_valid)
         
-        fitted_estimators[dim]=copy.deepcopy(fitted_estimator)
+        # results[dim],best_indexes[dim],fitted_estimator,timings[dim]=tune_hyperparameter("Tuning " + hyperparameter_name + " with PCA = "+str(dim)+"..",
+        #                                                                                     model,
+        #                                                                                     hyperparameter_name,
+        #                                                                                     hyperparameter_values,
+        #                                                                                     datasets_train[dim],
+        #                                                                                     datasets_valid[dim], 
+        #                                                                                     y_valid)
         
-    return results, best_indexes, fitted_estimators, timings
+        # fitted_estimators[dim]=copy.deepcopy(fitted_estimator)
+        
+    # return results, best_indexes, fitted_estimators, timings
+    return res
 
-def tune_model(name:str, max_pca_dim:int):
+def tune_model(model:str, max_pca_dim:int):
+    """
+    This function tunes the hyperparameter of the specified model.
+
+    INPUT:
+    - model, i.e. the model for which the tuning is performed;
+    - max_pca_dim, i.e. the maximum value of PCA.
+
+    OUTPUT:{PCA_dim : (best_index, fitted_model, training_time)}, where:
+    - result is a DataFrame containing, for each of the possible values of the hyperparameter to tune, the results of the trained model (number of clusters and rand score);
+    - best_index represents the index of the hyperparameter value which corresponds to the best rand score;
+    - fitted_model represents the model trained with the best hyperparamter value;
+    - training_time represents the training time.
+
+
+    - results = {PCA dimension, result dataframe for this dimension};
+    - best_indexes = {PCA dimension, best result index for the result dataframe for this dimension};
+    - fitted_estimator = {PCA dimension, fitted model with the best hyperparameter for this dimension};
+    - timings = {PCA dimension, fitting time for the best model for this dimension}.
+    """
     n_jobs = -1
 
     # loading the PCA transformed datasets
     datasets_valid, datasets_train, y_valid, _ = load_PCA_datasets(max_pca_dim)
 
     # setting the parameters according to the provided model
-    match name:
+    match model:
         case "GaussianMixture":
-            estimator = GaussianMixture(covariance_type = "diag", max_iter = 3000, random_state = 32)
+            model = GaussianMixture(covariance_type = "diag", max_iter = 3000, random_state = 32)
             hyperparameter_name = "n_components"
             hyperparameter_values = [x for x in range(5,16)]
             
         case "MeanShift":
-            estimator = MeanShift(n_jobs = n_jobs)
+            model = MeanShift(n_jobs = n_jobs)
             hyperparameter_name = "bandwidth"
-            hyperparameter_values = [0.2, 0.4, 0.6, 0.8, 1, 2, 5, 10, 15, 20]
+            hyperparameter_values = [0.6, 1, 3, 4, 5, 8, 10, 15, 20]
             
         case "NormalizedCut":
-            estimator = SpectralClustering(affinity = "nearest_neighbors", n_neighbors = 40, n_jobs = n_jobs)
+            model = SpectralClustering(affinity = "nearest_neighbors", n_neighbors = 40, n_jobs = n_jobs)
             hyperparameter_name = "n_clusters"
             hyperparameter_values = [x for x in range(5,16)]
 
@@ -152,49 +185,50 @@ def tune_model(name:str, max_pca_dim:int):
             print("Wrong model name...")
             exit(1)
 
-    return get_results(datasets_train, datasets_valid, y_valid, estimator, hyperparameter_name, hyperparameter_values)
+    return get_results(datasets_train, datasets_valid, y_valid, model, hyperparameter_name, hyperparameter_values)
 
-def save_results(model_name:str, results:Dict[int,pd.DataFrame], best_indexes:Dict[int,int], fitted_models:Dict[int,Union[GaussianMixture, MeanShift, SpectralClustering]], timings:Dict[int,float]):
+def save_results(max_pca_dim:int, model_name:str, result:pd.DataFrame, best_index:int, fitted_model:Union[GaussianMixture, MeanShift, SpectralClustering], training_time:float):
     """
-    Function that saves the results, the best indexes, fitted models and timings dicts for the given model.
+    This function saves the results of the execution of the tune_model function for a given model into a dedicated folder.
 
-    Args:
-        model_name (str): model name.
-        
-        results (Dict[int,pd.DataFrame]):
-            dict of:
-                -key: PCA dimension.
-                -value: result dataframe for this dimension.
-                
-        best_indexes (Dict[int,int]):
-            dict of:
-                -key: PCA dimension.
-                -value: best result index for the result dataframe for this dimension.
-                
-        fitted_models (Dict[int,Union[GaussianMixture, MeanShift, SpectralClustering]]):
-            dict of:
-                -key: PCA dimension.
-                -value: fitted model with the best hyperparameter for this dimension.
-                
-        timings (Dict[int,float]):
-            dict of:
-                -key: PCA dimension.
-                -value: fitting time for the best model for this dimension.
+    INPUT:
+    - max_pca_dim, i.e. the meximum value of PCA;
+    - model_name, i.e. the model name;
+    - results, i.e. a DataFrame containing, for each of the possible values of the hyperparameter to tune, the results of the trained model (number of clusters and rand score);                
+    - best_index, i.e. the index of the hyperparameter value which corresponds to the best rand score;            
+    - fitted_model, i.e. the model trained with the best hyperparamter value;
+    - training_time, i.e. the training time.
     """
     
-    PATH = os.getcwd()+"/"+model_name
+    PATH = os.getcwd() + "/" + model_name
     
     if not os.path.exists(PATH):
         os.mkdir(PATH)
     
-    with open(model_name+"/results.pkl", 'wb') as out:
-        pickle.dump(results, out, pickle.HIGHEST_PROTOCOL)
+    # with open(model_name+"/results.pkl", 'wb') as out:
+    #     pickle.dump(results, out, pickle.HIGHEST_PROTOCOL)
     
-    with open(model_name+"/best_indexes.pkl", 'wb') as out:
-        pickle.dump(best_indexes, out, pickle.HIGHEST_PROTOCOL)
+    # with open(model_name+"/best_indexes.pkl", 'wb') as out:
+    #     pickle.dump(best_indexes, out, pickle.HIGHEST_PROTOCOL)
             
-    with open(model_name+"/fitted_models.pkl", 'wb') as out:
-        pickle.dump(fitted_models, out, pickle.HIGHEST_PROTOCOL)
+    # with open(model_name+"/fitted_models.pkl", 'wb') as out:
+    #     pickle.dump(fitted_models, out, pickle.HIGHEST_PROTOCOL)
     
-    with open(model_name+"/timings.pkl", 'wb') as out:
-        pickle.dump(timings, out, pickle.HIGHEST_PROTOCOL)
+    # with open(model_name+"/timings.pkl", 'wb') as out:
+    #     pickle.dump(timings, out, pickle.HIGHEST_PROTOCOL)
+
+def new_save_results(model_name:str, result:Dict[int,tuple]):
+    """
+    This function saves the results of the execution of the tune_model function for a given model into a dedicated folder.
+
+    INPUT:
+    - model_name, i.e. the model name;
+    - result, i.e. {PCA_dim : (best_index, fitted_model, training_time), for each PCA_dim}.
+    """
+    PATH = os.getcwd() + "/tuning_results" 
+    
+    if not os.path.exists(PATH):
+        os.mkdir(PATH)
+
+    with open(os.getcwd() + "/tuning_results" + model_name, "wb") as out:
+        pickle.dump(result, out, pickle.HIGHEST_PROTOCOL)

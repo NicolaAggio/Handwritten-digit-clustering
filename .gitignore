@@ -5,3 +5,5 @@ GaussianMixture/
 MeanShift/
 NormalizedCut/
 old/
+tuning_results/
+grid_tuning_results/
