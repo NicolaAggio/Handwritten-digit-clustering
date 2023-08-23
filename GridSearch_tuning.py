@@ -17,39 +17,39 @@ from utils import load_PCA_datasets
 def get_results(X_train:Dict[int, pd.DataFrame], X_valid:Dict[int, pd.DataFrame], y_train:pd.Series, y_valid:pd.Series, model:GridSearchCV, model_name:str):
     """
     """
-    res = {int:tuple}
+    res = {}
     
     # recall: X_train.keys() = [pca_dim1, ..]
     for dim in tqdm(X_train.keys(), "Tuning " + model_name + " .."):
         start = time.time()
-        # print("Dimensions of X: ", X_train[dim].shape)
-        # print("Dimensions of y: ", y_train.shape)
         model.fit(X_train[dim], y_train)
         training_time = time.time() - start
 
         best_estimator = model.best_estimator_
-        best_score = model.best_score_
+        best_training_rand_score = model.best_score_
         best_params = model.best_params_
 
         print("PCA dimension = ", dim)
-        print("Best rand score = ", best_score)
+        print("Best training rand score = ", best_training_rand_score)
         print("Best parameters = ", best_params)
 
         labels = best_estimator.predict(X_valid[dim])
         validation_rand_score = rand_score(y_valid, labels)
 
-        res[dim] = best_params, best_score, validation_rand_score, training_time
+        print("Validation score = ", validation_rand_score)
+
+        res[dim] = best_params, best_training_rand_score, validation_rand_score, training_time
 
     return res
 
-def tune_model(model_name:str, max_pca_dim:int):
+def tune_model(model_name:str, max_pca_dim:int, dataset_percentage:float):
     """
     
     """
     n_jobs = -1
 
     # loading the PCA transformed datasets
-    X_valid, X_train, y_valid, y_train = load_PCA_datasets(max_pca_dim)
+    X_valid, X_train, y_valid, y_train = load_PCA_datasets(max_pca_dim, dataset_percentage)
 
     # setting the parameters according to the provided model
     match model_name:
@@ -84,10 +84,8 @@ def save_results(model_name:str, result:Dict[int,tuple]):
     - model_name, i.e. the model name;
     - result, i.e. {PCA_dim : (best_index, fitted_model, training_time), for each PCA_dim}.
     """
-    PATH = os.getcwd() + "/grid_tuning_results" 
-    
-    if not os.path.exists(PATH):
-        os.mkdir(PATH)
+    if not os.path.exists(os.getcwd() + "/GridSearch_tuning"):
+        os.mkdir(os.getcwd() + "/GridSearch_tuning")
 
-    with open(model_name, "wb") as out:
+    with open(model_name + '.pkl', "wb") as out:
         pickle.dump(result, out, pickle.HIGHEST_PROTOCOL)

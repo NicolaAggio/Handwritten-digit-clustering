@@ -139,7 +139,7 @@ def get_results(datasets_train:Dict[int, pd.DataFrame], datasets_valid:Dict[int,
     # return results, best_indexes, fitted_estimators, timings
     return res
 
-def tune_model(model:str, max_pca_dim:int):
+def tune_model(model:str, max_pca_dim:int, dataset_percentage:float):
     """
     This function tunes the hyperparameter of the specified model.
 
@@ -162,7 +162,7 @@ def tune_model(model:str, max_pca_dim:int):
     n_jobs = -1
 
     # loading the PCA transformed datasets
-    datasets_valid, datasets_train, y_valid, _ = load_PCA_datasets(max_pca_dim)
+    datasets_valid, datasets_train, y_valid, _ = load_PCA_datasets(max_pca_dim, dataset_percentage)
 
     # setting the parameters according to the provided model
     match model:
@@ -230,5 +230,5 @@ def new_save_results(model_name:str, result:Dict[int,tuple]):
     if not os.path.exists(PATH):
         os.mkdir(PATH)
 
-    with open(os.getcwd() + "/tuning_results" + model_name, "wb") as out:
+    with open(model_name + ".pkl", "wb") as out:
         pickle.dump(result, out, pickle.HIGHEST_PROTOCOL)

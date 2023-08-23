@@ -2,8 +2,9 @@
 This file contains the functions for loading, saving and pre-processing the MNIST dataset, along with some functions fol plotting the digits of the dataset etc..
 """
 import pandas as pd
-import matplotlib.pyplot as plt
+
 import numpy as np
+import pickle
 
 from sklearn.datasets import fetch_openml
 from pathlib import Path
@@ -51,16 +52,20 @@ def load_PCA_datasets(max_pca_dim:int, dataset_percentage:float):
     - y_train, i.e. the training feature vector;
     """
     
-    y_valid = pd.read_parquet('dataset/' + str(dataset_percentage) + 'valid/y.parquet').squeeze() 
-    y_train = pd.read_parquet('dataset/' + str(dataset_percentage) + 'train/y.parquet').squeeze() 
+    y_valid = pd.read_parquet('dataset/' + str(dataset_percentage) + '/valid/y.parquet').squeeze() 
+    y_train = pd.read_parquet('dataset/' + str(dataset_percentage) + '/train/y.parquet').squeeze() 
     X_valid = {}
     X_train = {}
     
     for i in tqdm(range(2,max_pca_dim+10,10), desc="Loading the PCA datasets.."):
-        X_valid[i] = pd.read_parquet("dataset/" + str(dataset_percentage) + "valid/X_" + str(i) + ".parquet")
-        X_train[i] = pd.read_parquet("dataset/" + str(dataset_percentage) + "train/X_" + str(i) + ".parquet")
+        X_valid[i] = pd.read_parquet("dataset/" + str(dataset_percentage) + "/valid/X_" + str(i) + ".parquet")
+        X_train[i] = pd.read_parquet("dataset/" + str(dataset_percentage) + "/train/X_" + str(i) + ".parquet")
         
     return X_valid, X_train, y_valid, y_train
+
+def load_tuning_results(model_name:str):
+    with open("GridSearch_tuning/" + model_name + ".pkl","rb") as file:
+        return pickle.load(file)
 
 # PRE-PROCESSING
 def train_valid_test_split(X:pd.DataFrame, y:pd.Series, test_size:float, validation_size:float):
@@ -105,8 +110,8 @@ def apply_PCA(X:pd.DataFrame, y:pd.Series, max_pca_dim:int, dataset_percentage:f
     indexes = r.choice(70000, int(70000*dataset_percentage),replace=False)
     
     # saving the sampled dataset 
-    X.iloc[indexes].to_parquet("dataset/" + str(dataset_percentage) + "X.parquet")
-    y[indexes].to_frame().to_parquet("dataset/" + str(dataset_percentage) + "y.parquet")
+    X.iloc[indexes].to_parquet("dataset/" + str(dataset_percentage) + "/X.parquet")
+    y[indexes].to_frame().to_parquet("dataset/" + str(dataset_percentage) + "/y.parquet")
 
     for i in tqdm(range(2,max_pca_dim+10,10), desc="Applying PCA transformation.."):
         if not Path("dataset/" + str(dataset_percentage) + "/train/X_" + str(i) + ".parquet").is_file() or not Path("dataset/" + str(dataset_percentage) + "/valid/X_" + str(i) + ".parquet").is_file() or not Path("dataset/" + str(dataset_percentage) + "/test/X_" + str(i) + ".parquet").is_file():
@@ -119,22 +124,11 @@ def apply_PCA(X:pd.DataFrame, y:pd.Series, max_pca_dim:int, dataset_percentage:f
             X_train, y_train, X_valid, y_valid, X_test, y_test = train_valid_test_split(df,y[indexes].to_frame(),test_size,validation_size)
             
             # saving the label vectors
-            y_train.to_parquet("dataset/" + str(dataset_percentage) + "train/y.parquet")
-            y_valid.to_parquet("dataset/" + str(dataset_percentage) + "valid/y.parquet")
-            y_test.to_parquet("dataset/" + str(dataset_percentage) + "test/y.parquet")
+            y_train.to_parquet("dataset/" + str(dataset_percentage) + "/train/y.parquet")
+            y_valid.to_parquet("dataset/" + str(dataset_percentage) + "/valid/y.parquet")
+            y_test.to_parquet("dataset/" + str(dataset_percentage) + "/test/y.parquet")
 
             # saving the transformed dataset 
-            X_train.to_parquet("dataset/" + str(dataset_percentage) + "train/X_"+str(i)+".parquet")
-            X_valid.to_parquet("dataset/" + str(dataset_percentage) + "valid/X_"+str(i)+".parquet")
-            X_test.to_parquet("dataset/" + str(dataset_percentage) + "test/X_"+str(i)+".parquet")            
-
-# PLOTS
-def plot_digits(iter, X, y):
-    fig, axs = plt.subplots(10, iter=15)
-    
-    for digit in range(10):
-        for x in range(iter):
-            digit_index = y[y == digit].index[x]
-            digit_pixels = np.array(X.iloc[digit_index]).reshape(28, 28)
-            axs[digit,x].imshow(digit_pixels)
-            axs[digit,x].axis('off')
+            X_train.to_parquet("dataset/" + str(dataset_percentage) + "/train/X_"+str(i)+".parquet")
+            X_valid.to_parquet("dataset/" + str(dataset_percentage) + "/valid/X_"+str(i)+".parquet")
+            X_test.to_parquet("dataset/" + str(dataset_percentage) + "/test/X_"+str(i)+".parquet")            
