@@ -9,12 +9,11 @@ import pickle
 from typing import Dict
 from sklearn.mixture import GaussianMixture
 from sklearn.cluster import MeanShift, SpectralClustering
-from sklearn.metrics.cluster import rand_score
 from sklearn.model_selection import GridSearchCV
 from tqdm.notebook import tqdm
-from utils import load_PCA_datasets
+from utils import load_PCA_train_sets
 
-def get_results(X_train:Dict[int, pd.DataFrame], X_valid:Dict[int, pd.DataFrame], y_train:pd.Series, y_valid:pd.Series, model:GridSearchCV, model_name:str):
+def get_results(X_train:Dict[int, pd.DataFrame], y_train:pd.Series, model:GridSearchCV, model_name:str):
     """
     """
     res = {}
@@ -26,30 +25,34 @@ def get_results(X_train:Dict[int, pd.DataFrame], X_valid:Dict[int, pd.DataFrame]
         training_time = time.time() - start
 
         best_estimator = model.best_estimator_
-        best_training_rand_score = model.best_score_
+        best_rand_score = model.best_score_
         best_params = model.best_params_
 
         print("PCA dimension = ", dim)
-        print("Best training rand score = ", best_training_rand_score)
+        print("Best rand score = ", best_rand_score)
         print("Best parameters = ", best_params)
 
-        labels = best_estimator.predict(X_valid[dim])
-        validation_rand_score = rand_score(y_valid, labels)
+        if (model_name == "MeanShift"):
+            n_clusters = best_estimator.cluster_centers_.shape[0]
+            print("Number of clusters = ", n_clusters)
+            res[dim] = best_estimator, best_params, best_rand_score, training_time, n_clusters
 
-        print("Validation score = ", validation_rand_score)
-
-        res[dim] = best_params, best_training_rand_score, validation_rand_score, training_time
+        else:
+            res[dim] = best_estimator, best_params, best_rand_score, training_time
 
     return res
 
 def tune_model(model_name:str, max_pca_dim:int, dataset_percentage:float):
     """
-    
+    This function sets the hyperparameters (names and values) for the provided model.
+
+    INPUT:
+    - 
     """
     n_jobs = -1
 
     # loading the PCA transformed datasets
-    X_valid, X_train, y_valid, y_train = load_PCA_datasets(max_pca_dim, dataset_percentage)
+    X_train, y_train = load_PCA_train_sets(max_pca_dim, dataset_percentage)
 
     # setting the parameters according to the provided model
     match model_name:
@@ -60,7 +63,7 @@ def tune_model(model_name:str, max_pca_dim:int, dataset_percentage:float):
             model = GridSearchCV(GaussianMixture(covariance_type="diag", random_state=1, max_iter=200), param_grid, scoring="rand_score", refit="rand_score", n_jobs=n_jobs, cv=5, error_score="raise")
             
         case "MeanShift":
-            param_grid = {"bandwidth" : [0.6, 1, 3, 4, 5, 8, 10, 15, 20]}
+            param_grid = {"bandwidth" : [0.6, 1, 3, 4, 5, 8]}
             model = GridSearchCV(MeanShift(n_jobs=n_jobs), param_grid, scoring="rand_score", refit="rand_score", n_jobs=n_jobs, cv=5, error_score="raise")
             
         case "NormalizedCut":
@@ -68,13 +71,13 @@ def tune_model(model_name:str, max_pca_dim:int, dataset_percentage:float):
             "n_neighbors" : [10, 20, 30, 40],
             "assign_labels" : ["kmeans", "discretize", "cluster_qr"]}
 
-            model = GridSearchCV(SpectralClustering(affinity="nearest_neighbors", n_jobs=n_jobs, random_state=1), param_grid, scoring="rand_score", refit="rand_score", n_jobs=n_jobs, error_score="raise")
+            model = GridSearchCV(SpectralClustering(affinity="nearest_neighbors", n_jobs=n_jobs, random_state=1), param_grid, scoring="rand_score", refit="rand_score", n_jobs=n_jobs, cv=5, error_score="raise")
 
         case _:
             print("Wrong model name...")
             exit(1)
 
-    return get_results(X_train, X_valid, y_train, y_valid, model, model_name)
+    return get_results(X_train, y_train, model, model_name)
 
 def save_results(model_name:str, result:Dict[int,tuple]):
     """

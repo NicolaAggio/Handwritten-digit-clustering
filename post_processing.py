@@ -3,6 +3,9 @@ from typing import Dict
 def best_PCA(tuning_results:Dict[int,tuple]):
     """
     This function retrieves the value of PCA for which the rand score on the validation set is maximum.
+
+    INPUT: 
+    - tuning_results = 
     """
     best_PCA = 0
     best_hyperparameters = {}
@@ -12,7 +15,7 @@ def best_PCA(tuning_results:Dict[int,tuple]):
         score = tuning_results[pca_dim][2]
         if score > max_rand_score:
             best_PCA = pca_dim
-            best_hyperparameters = tuning_results[pca_dim][0]
+            best_hyperparameters = tuning_results[pca_dim][1]
             max_rand_score = score
 
     print("The best PCA dimension is " + str(best_PCA) + ", with hyperparameters = ", best_hyperparameters)
@@ -37,3 +40,12 @@ def get_rand_scores(tuning_results:Dict[int,tuple]):
 
     return rand_scores
 
+def get_n_clusters(tuning_results:Dict[int,tuple]):
+    """
+    This function retrieves, for each PCA dimension value, the number of clusters obtained by the MeanShift model with the best values of the hyperparameters.
+    """
+    n_clusters = []
+    for pca_dim in tuning_results.keys():
+        n_clusters.append(tuning_results[pca_dim[4]])
+
+    return get_n_clusters

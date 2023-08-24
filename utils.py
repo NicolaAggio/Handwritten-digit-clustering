@@ -14,18 +14,29 @@ from tqdm import tqdm
 
 # LOADING
 def load_dataset():
+    """
+    This function loads the MNIST dataset from the "dataset" folder.
+    """
     X = pd.read_parquet('dataset/X.parquet')
     y = pd.read_parquet('dataset/y.parquet').squeeze() 
 
     return X,y
 
-def load_reduced_dataset(dataset_perc:float):
-    X = pd.read_parquet('dataset/' + str(dataset_perc) + '/X.parquet')
-    y = pd.read_parquet('dataset/' + str(dataset_perc) + '/y.parquet').squeeze() 
+def load_reduced_dataset(dataset_percentage:float):
+    """
+    This function loads the reduced dataset from the corresponding folder.
+
+    INPUT: dataset_percentage, i.e. the percentage of dataset that is considered.
+    """
+    X = pd.read_parquet('dataset/' + str(dataset_percentage) + '/X.parquet')
+    y = pd.read_parquet('dataset/' + str(dataset_percentage) + '/y.parquet').squeeze() 
 
     return X,y
 
 def download_dataset():
+    """
+    This function downloads the MNIST dataset, if not present in the "dataset" folder, otherwise it loads it from the same folder.
+    """
     if not Path("dataset/X.parquet").is_file() and not Path("dataset/y.parquet").is_file():
         X,y = fetch_openml('mnist_784', version=1, return_X_y=True)
         y = y.astype(int)
@@ -38,71 +49,61 @@ def download_dataset():
     
     return X,y
 
-def load_PCA_datasets(max_pca_dim:int, dataset_percentage:float):
+def load_PCA_train_sets(max_pca_dim:int, dataset_percentage:float):
     """
     This function loads the transformed validation and training datasets from the "dataset/valid" and "dataset/train" folders.
 
     INPUT:
-    - max_pca_dim = int, i.e. the maximum PCA dimension.
+    - max_pca_dim = int, i.e. the maximum PCA dimension;
+    - dataset_percentage, i.e. the percentage of dataset that is considered.
 
-    OUTPUT: (X_valid, X_train, y_valid, y_train), where:
-    - X_valid, i.e. {PCA_dim : X_valid, for each PCA_dim};
+    OUTPUT: (X_train, y_train), where:
     - X_train, i.e. {PCA_dim : X_train, for each PCA_dim};
-    - y_valid, i.e. the validation feature vector;
     - y_train, i.e. the training feature vector;
     """
     
-    y_valid = pd.read_parquet('dataset/' + str(dataset_percentage) + '/valid/y.parquet').squeeze() 
     y_train = pd.read_parquet('dataset/' + str(dataset_percentage) + '/train/y.parquet').squeeze() 
-    X_valid = {}
     X_train = {}
     
     for i in tqdm(range(2,max_pca_dim+10,10), desc="Loading the PCA datasets.."):
-        X_valid[i] = pd.read_parquet("dataset/" + str(dataset_percentage) + "/valid/X_" + str(i) + ".parquet")
         X_train[i] = pd.read_parquet("dataset/" + str(dataset_percentage) + "/train/X_" + str(i) + ".parquet")
         
-    return X_valid, X_train, y_valid, y_train
+    return X_train, y_train
 
 def load_tuning_results(model_name:str):
     with open("GridSearch_tuning/" + model_name + ".pkl","rb") as file:
         return pickle.load(file)
 
 # PRE-PROCESSING
-def train_valid_test_split(X:pd.DataFrame, y:pd.Series, test_size:float, validation_size:float):
+
+def split(X:pd.DataFrame, y:pd.Series, test_size:float):
     """
-    This function performs a train-validation-test split of the dataset.
-    
+    This function performs a train-test splitting of the dataset.
+
     INPUT:
-    - X, i.e. the feature vector;
+    - X, i.e. the feature dataframe;
     - y, i.e. the label vector;
-    - test_size, i.e. the size of the test set;
-    - validation_size, i.e. the size of the validation set.
+    - test_size, i.e. the size of the test set.
 
     OUTPUT:
-    - X_train, i.e. the feature vector for the training phase;
-    - y_train, i.e. the label vector for the training phase;
-    - X_valid, i.e. the feature vector for the validation phase;
-    - y_valid, i.e. the label vector for the validation phase;
-    - X_test, i.e. the feature vector for the testing phase;
-    - y_test, i.e. the label vector for the testing phase.
+    - X_train, i.e. the training feature dataframe;
+    - y_train, i.e. the training label vector;
+    - X_test, i.e. the testing feature dataframe;
+    - y_test, i.e. the testing label vector;
     """
+    X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=test_size)
+    return X_train, y_train, X_test, y_test
 
-    X_train_80, X_test, y_train_80, y_test = train_test_split(X, y, test_size = test_size, random_state = 1)
-    X_train, X_valid , y_train, y_valid = train_test_split(X_train_80, y_train_80, test_size = validation_size, random_state = 1)
-
-    # print("Dimensions of X_train: ", X_train.shape)
-    # print("Dimensions of X_valid: ", X_valid.shape)
-    # print("Dimensions of X_test: ", X_test.shape)
-
-    # print("Dimensions of y_train: ", y_train.shape)
-    # print("Dimensions of y_valid: ", y_valid.shape)
-    # print("Dimensions of y_test: ", y_test.shape)
-
-    return X_train, y_train, X_valid, y_valid, X_test, y_test
-
-def apply_PCA(X:pd.DataFrame, y:pd.Series, max_pca_dim:int, dataset_percentage:float, test_size:float, validation_size:float):
+def apply_PCA(X:pd.DataFrame, y:pd.Series, max_pca_dim:int, dataset_percentage:float, test_size:float):
     """
-    This function applies some PCA transformations to a fraction of the MNIST dataset.\nFor the aim of the project, the PCA dimension varies from 2 to 200.
+    This function applies some PCA transformations to a fraction of the MNIST dataset.\nFor the aim of the project, the dataset percentage is set to 50% and the PCA dimension varies from 2 to 200.
+    
+    INPUT:
+    - X, i.e. the feature dataframe;
+    - y, i.e. the label vector;
+    - max_pca_dim, i.e. the maximum dimension of PCA;
+    - dataset_percentage, i.e. the percentage of dataset that is used;
+    - test_size, i.e. the size of the test set.
     """
 
     # random sampling
@@ -114,21 +115,19 @@ def apply_PCA(X:pd.DataFrame, y:pd.Series, max_pca_dim:int, dataset_percentage:f
     y[indexes].to_frame().to_parquet("dataset/" + str(dataset_percentage) + "/y.parquet")
 
     for i in tqdm(range(2,max_pca_dim+10,10), desc="Applying PCA transformation.."):
-        if not Path("dataset/" + str(dataset_percentage) + "/train/X_" + str(i) + ".parquet").is_file() or not Path("dataset/" + str(dataset_percentage) + "/valid/X_" + str(i) + ".parquet").is_file() or not Path("dataset/" + str(dataset_percentage) + "/test/X_" + str(i) + ".parquet").is_file():
+        if not Path("dataset/" + str(dataset_percentage) + "/train/X_" + str(i) + ".parquet").is_file() or not Path("dataset/" + str(dataset_percentage) + "/test/X_" + str(i) + ".parquet").is_file():
             pca = PCA(n_components=i)
             
             # applying the PCA transformation to the sampled dataset
             df = pd.DataFrame(pca.fit_transform(X),columns=["pca_"+str(x) for x in range(1,i+1)])
             df = df.iloc[indexes]
 
-            X_train, y_train, X_valid, y_valid, X_test, y_test = train_valid_test_split(df,y[indexes].to_frame(),test_size,validation_size)
+            X_train, y_train, X_test, y_test = split(df,y[indexes].to_frame(),test_size)
             
             # saving the label vectors
             y_train.to_parquet("dataset/" + str(dataset_percentage) + "/train/y.parquet")
-            y_valid.to_parquet("dataset/" + str(dataset_percentage) + "/valid/y.parquet")
             y_test.to_parquet("dataset/" + str(dataset_percentage) + "/test/y.parquet")
 
             # saving the transformed dataset 
             X_train.to_parquet("dataset/" + str(dataset_percentage) + "/train/X_"+str(i)+".parquet")
-            X_valid.to_parquet("dataset/" + str(dataset_percentage) + "/valid/X_"+str(i)+".parquet")
             X_test.to_parquet("dataset/" + str(dataset_percentage) + "/test/X_"+str(i)+".parquet")            
