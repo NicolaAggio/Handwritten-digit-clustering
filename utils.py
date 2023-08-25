@@ -2,7 +2,6 @@
 This file contains the functions for loading, saving and pre-processing the MNIST dataset, along with some functions fol plotting the digits of the dataset etc..
 """
 import pandas as pd
-
 import numpy as np
 import pickle
 
@@ -13,7 +12,7 @@ from sklearn.decomposition import PCA
 from tqdm import tqdm
 
 # LOADING
-def load_dataset():
+def load_MNIST_dataset():
     """
     This function loads the MNIST dataset from the "dataset" folder.
     """
@@ -45,13 +44,19 @@ def download_dataset():
         X.to_parquet("dataset/X.parquet")
         y.to_frame().to_parquet("dataset/y.parquet")
     else:
-        X,y = load_dataset()
+        X,y = load_MNIST_dataset()
     
     return X,y
 
+def load_PCA_2(dataset_percentage:float):
+    y_test = pd.read_parquet('dataset/' + str(dataset_percentage) + '/test/y.parquet').squeeze() 
+    X_test = pd.read_parquet("dataset/" + str(dataset_percentage) + "/test/X_2.parquet")
+
+    return X_test, y_test
+
 def load_PCA_train_sets(max_pca_dim:int, dataset_percentage:float):
     """
-    This function loads the transformed validation and training datasets from the "dataset/valid" and "dataset/train" folders.
+    This function loads the transformed training datasets from the "dataset/train" folders.
 
     INPUT:
     - max_pca_dim = int, i.e. the maximum PCA dimension;
@@ -65,10 +70,31 @@ def load_PCA_train_sets(max_pca_dim:int, dataset_percentage:float):
     y_train = pd.read_parquet('dataset/' + str(dataset_percentage) + '/train/y.parquet').squeeze() 
     X_train = {}
     
-    for i in tqdm(range(2,max_pca_dim+10,10), desc="Loading the PCA datasets.."):
+    for i in tqdm(range(2,max_pca_dim+10,10), desc="Loading the PCA training datasets.."):
         X_train[i] = pd.read_parquet("dataset/" + str(dataset_percentage) + "/train/X_" + str(i) + ".parquet")
         
     return X_train, y_train
+
+def load_PCA_test_sets(max_pca_dim:int, dataset_percentage:float):
+    """
+    This function loads the transformed testing datasets from the "dataset/test" folders.
+
+    INPUT:
+    - max_pca_dim = int, i.e. the maximum PCA dimension;
+    - dataset_percentage, i.e. the percentage of dataset that is considered.
+
+    OUTPUT: (X_test, y_test), where:
+    - X_test, i.e. {PCA_dim : X_test, for each PCA_dim};
+    - y_test, i.e. the testing feature vector;
+    """
+    
+    y_test = pd.read_parquet('dataset/' + str(dataset_percentage) + '/test/y.parquet').squeeze() 
+    X_test = {}
+    
+    for i in tqdm(range(2,max_pca_dim+10,10), desc="Loading the PCA testing datasets.."):
+        X_test[i] = pd.read_parquet("dataset/" + str(dataset_percentage) + "/test/X_" + str(i) + ".parquet")
+        
+    return X_test, y_test
 
 def load_tuning_results(model_name:str):
     with open("GridSearch_tuning/" + model_name + ".pkl","rb") as file:
