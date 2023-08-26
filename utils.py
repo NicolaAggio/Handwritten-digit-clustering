@@ -159,4 +159,7 @@ def apply_PCA(X:pd.DataFrame, y:pd.Series, max_pca_dim:int, dataset_percentage:f
 
             # saving the transformed dataset 
             X_train.to_parquet("dataset/" + str(dataset_percentage) + "/train/X_"+str(i)+".parquet")
-            X_test.to_parquet("dataset/" + str(dataset_percentage) + "/test/X_"+str(i)+".parquet")            
+            X_test.to_parquet("dataset/" + str(dataset_percentage) + "/test/X_"+str(i)+".parquet") 
+
+            with open("PCA/"+str(i)+".pkl", 'wb') as out:
+                pickle.dump(pca, out, pickle.HIGHEST_PROTOCOL)           
