@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import pickle
 
 from utils import load_PCA_2
-from typing import List
+from typing import List, Dict
 
 def plot_digits(iter, X, y):
     fig, axs = plt.subplots(10, iter=15)
@@ -73,3 +74,44 @@ def plot_clusters(dataset_percentage:float, n_clusters:int, labels:List):
         
     plt.title("Number of clusters: %d" % n_clusters, weight = "bold")
     plt.show()
+
+def plot_images_per_cluster(X_test:Dict, pca_dim:int, labels:List, n_clusters:int):
+    """
+    This function plots 4 images of each of the obtained clusters, given the PCA dimensions.
+    """
+
+    fig,axs = plt.subplots(n_clusters, 4, figsize = (4*2, n_clusters*2))
+    fig.suptitle(f"PCA dimension: {pca_dim}", weight = "bold")
+
+    df = X_test[pca_dim]
+
+    for item in [item for sublist in axs for item in sublist]:
+        item.set_yticklabels([])
+        item.set_xticklabels([])
+                
+    for k in range(n_clusters):
+        my_members = labels == k
+        with open("PCA/"+str(pca_dim)+".pkl", 'rb') as inp:
+            pca = pickle.load(inp)
+        data = pca.inverse_transform(df[my_members])
+    
+        if data.shape[0]>=4:
+            random_indexes=np.random.choice(data.shape[0], size=4, replace=False)
+        else:
+            random_indexes=np.random.choice(data.shape[0], size=data.shape[0], replace=False)
+            
+        for i,imag in enumerate(data[random_indexes, :]):
+                axs[k,i].imshow(imag.reshape(28, 28))
+                
+        if data.shape[0]==0:
+            i=-1
+    
+        for j in range(i+1,4):
+            axs[k,j].imshow(np.zeros(28*28).reshape(28,28))
+            
+    for ax,c in zip(axs[:,0],range(n_clusters)):
+        ax.set_ylabel(str(c), rotation=0, size='large')
+    
+    fig.tight_layout()
+    fig.subplots_adjust(top=0.95)
+    fig.show()
