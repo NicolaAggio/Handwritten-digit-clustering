@@ -3,17 +3,19 @@ This file contains the functions for tuning the hyperparameters of each of the c
 """
 import pandas as pd
 import time
-import os
 import pickle
+import numpy as np
 
+from sklearn.base import ClusterMixin, BaseEstimator
 from typing import Union, List, Dict
 from sklearn.mixture import GaussianMixture
 from sklearn.cluster import MeanShift, SpectralClustering
 from sklearn.metrics.cluster import rand_score
 from tqdm.notebook import tqdm
-from utils import load_PCA_datasets
+from utils import load_PCA_train_sets
 
-def evaluate_model(model: Union[GaussianMixture, MeanShift, SpectralClustering], X_train:pd.DataFrame, X_valid:pd.DataFrame, y_valid:pd.Series, hyperparameter_name:str, hyperparameter_val:Union[int,float]):
+
+def evaluate_model(model: Union[GaussianMixture, MeanShift, SpectralClustering], X_valid:pd.DataFrame, y_valid:pd.DataFrame, hyperparameter_name:str, hyperparameter_val:Union[int,float]):
     """
     This function fits the given clustering model with different values for the given hyperparamater, and finally calculates the rand score.
 
@@ -33,8 +35,7 @@ def evaluate_model(model: Union[GaussianMixture, MeanShift, SpectralClustering],
     
     # fitting the model
     model = model.set_params(**{hyperparameter_name:hyperparameter_val})
-    mod = model.fit(X_train)
-    labels = mod.predict(X_valid)
+    labels = model.fit_predict(X_valid)
     score = rand_score(y_valid, labels)
     
     if isinstance(model, MeanShift):
@@ -67,7 +68,7 @@ def tune_hyperparameter(desc:str, model: Union[GaussianMixture, MeanShift, Spect
 
     # evaluating the model with each value of the hyperparameter
     for val in tqdm(hyperparameter_values, desc=desc):
-        result.append(evaluate_model(model,X_train, X_valid, y_valid, hyperparameter_name, val))
+        result.append(evaluate_model(model, X_valid, y_valid, hyperparameter_name, val))
     
     if isinstance(model, MeanShift):
         columns = [hyperparameter_name, 'n_clusters', 'rand_score']
@@ -111,10 +112,6 @@ def get_results(datasets_train:Dict[int, pd.DataFrame], datasets_valid:Dict[int,
     """
     
     res = {int:tuple}
-    # results = {}
-    # best_indexes = {}
-    # fitted_estimators = {}
-    # timings = {}
     
     # recall: datasets_train.keys() = [pca_dim1, ..]
     for dim in tqdm(datasets_train.keys()):
@@ -126,17 +123,6 @@ def get_results(datasets_train:Dict[int, pd.DataFrame], datasets_valid:Dict[int,
                                                                                             datasets_valid[dim], 
                                                                                             y_valid)
         
-        # results[dim],best_indexes[dim],fitted_estimator,timings[dim]=tune_hyperparameter("Tuning " + hyperparameter_name + " with PCA = "+str(dim)+"..",
-        #                                                                                     model,
-        #                                                                                     hyperparameter_name,
-        #                                                                                     hyperparameter_values,
-        #                                                                                     datasets_train[dim],
-        #                                                                                     datasets_valid[dim], 
-        #                                                                                     y_valid)
-        
-        # fitted_estimators[dim]=copy.deepcopy(fitted_estimator)
-        
-    # return results, best_indexes, fitted_estimators, timings
     return res
 
 def tune_model(model:str, max_pca_dim:int, dataset_percentage:float):
@@ -162,7 +148,7 @@ def tune_model(model:str, max_pca_dim:int, dataset_percentage:float):
     n_jobs = -1
 
     # loading the PCA transformed datasets
-    datasets_valid, datasets_train, y_valid, _ = load_PCA_datasets(max_pca_dim, dataset_percentage)
+    datasets_train, y_train = load_PCA_train_sets(max_pca_dim, dataset_percentage)
 
     # setting the parameters according to the provided model
     match model:
@@ -177,47 +163,13 @@ def tune_model(model:str, max_pca_dim:int, dataset_percentage:float):
             hyperparameter_values = [0.6, 1, 3, 4, 5, 8, 10, 15, 20]
             
         case "NormalizedCut":
-            model = SpectralClustering(affinity = "nearest_neighbors", n_neighbors = 40, n_jobs = n_jobs)
+            model = MySpectralClustring(affinity = "nearest_neighbors", n_jobs = n_jobs)
             hyperparameter_name = "n_clusters"
             hyperparameter_values = [x for x in range(5,16)]
 
-        case _:
-            print("Wrong model name...")
-            exit(1)
+    return get_results(datasets_train, model, hyperparameter_name, hyperparameter_values)
 
-    return get_results(datasets_train, datasets_valid, y_valid, model, hyperparameter_name, hyperparameter_values)
-
-def save_results(max_pca_dim:int, model_name:str, result:pd.DataFrame, best_index:int, fitted_model:Union[GaussianMixture, MeanShift, SpectralClustering], training_time:float):
-    """
-    This function saves the results of the execution of the tune_model function for a given model into a dedicated folder.
-
-    INPUT:
-    - max_pca_dim, i.e. the meximum value of PCA;
-    - model_name, i.e. the model name;
-    - results, i.e. a DataFrame containing, for each of the possible values of the hyperparameter to tune, the results of the trained model (number of clusters and rand score);                
-    - best_index, i.e. the index of the hyperparameter value which corresponds to the best rand score;            
-    - fitted_model, i.e. the model trained with the best hyperparamter value;
-    - training_time, i.e. the training time.
-    """
-    
-    PATH = os.getcwd() + "/" + model_name
-    
-    if not os.path.exists(PATH):
-        os.mkdir(PATH)
-    
-    # with open(model_name+"/results.pkl", 'wb') as out:
-    #     pickle.dump(results, out, pickle.HIGHEST_PROTOCOL)
-    
-    # with open(model_name+"/best_indexes.pkl", 'wb') as out:
-    #     pickle.dump(best_indexes, out, pickle.HIGHEST_PROTOCOL)
-            
-    # with open(model_name+"/fitted_models.pkl", 'wb') as out:
-    #     pickle.dump(fitted_models, out, pickle.HIGHEST_PROTOCOL)
-    
-    # with open(model_name+"/timings.pkl", 'wb') as out:
-    #     pickle.dump(timings, out, pickle.HIGHEST_PROTOCOL)
-
-def new_save_results(model_name:str, result:Dict[int,tuple]):
+def save_tuning_results(model_name:str, result:Dict[int,tuple]):
     """
     This function saves the results of the execution of the tune_model function for a given model into a dedicated folder.
 
@@ -225,10 +177,6 @@ def new_save_results(model_name:str, result:Dict[int,tuple]):
     - model_name, i.e. the model name;
     - result, i.e. {PCA_dim : (best_index, fitted_model, training_time), for each PCA_dim}.
     """
-    PATH = os.getcwd() + "/tuning_results" 
-    
-    if not os.path.exists(PATH):
-        os.mkdir(PATH)
 
-    with open(model_name + ".pkl", "wb") as out:
+    with open("tuning_" + model_name + ".pkl", "wb") as out:
         pickle.dump(result, out, pickle.HIGHEST_PROTOCOL)

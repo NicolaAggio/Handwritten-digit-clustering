@@ -4,9 +4,10 @@ import numpy as np
 from utils import load_PCA_test_sets
 from typing import Dict, Union, List
 from sklearn.mixture import GaussianMixture
-from sklearn.cluster import MeanShift, SpectralClustering
+from sklearn.cluster import MeanShift
 from sklearn.metrics.cluster import rand_score
 from tqdm import tqdm
+from GridSearch_tuning import MySpectralClustring
 
 def best_PCA(tuning_results:Dict[int,tuple]):
     """
@@ -108,7 +109,7 @@ def get_labels(testing_results:Dict[int,tuple]):
 
     return labels
 
-def execute_estimators(best_estimators:List[Union[GaussianMixture, MeanShift, SpectralClustering]], model_name:str, max_pca_dim:int, dataset_percentage:float):
+def execute_estimators(best_estimators:List[Union[GaussianMixture, MeanShift, MySpectralClustring]], model_name:str, max_pca_dim:int, dataset_percentage:float):
     """
     This function execute the best estimator on the test set.
     """

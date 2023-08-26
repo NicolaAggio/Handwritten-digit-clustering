@@ -49,6 +49,9 @@ def download_dataset():
     return X,y
 
 def load_PCA_2(dataset_percentage:float):
+    """
+    This function loads the test dataset corresponding to PCA dimension 2 from the corresponding folder.
+    """
     y_test = pd.read_parquet('dataset/' + str(dataset_percentage) + '/test/y.parquet').squeeze() 
     X_test = pd.read_parquet("dataset/" + str(dataset_percentage) + "/test/X_2.parquet")
 
