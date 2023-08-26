@@ -21,7 +21,10 @@ def get_results(X_train:Dict[int, pd.DataFrame], y_train:pd.Series, model:GridSe
     # recall: X_train.keys() = [pca_dim1, ..]
     for dim in tqdm(X_train.keys(), "Tuning " + model_name + " .."):
         start = time.time()
-        model.fit(X_train[dim], y_train)
+        if model_name == "NormalizedCut":
+            model.fit_predict(X_train[dim], y_train)
+        else:
+            model.fit(X_train[dim], y_train)
         training_time = time.time() - start
 
         best_estimator = model.best_estimator_
