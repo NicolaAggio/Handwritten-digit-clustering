@@ -11,7 +11,7 @@ from sklearn.mixture import GaussianMixture
 from sklearn.cluster import MeanShift
 from sklearn.metrics.cluster import rand_score
 from tqdm import tqdm
-from GridSearch_tuning import MySpectralClustring
+from gridsearch_tuning import MySpectralClustring
 
 def best_PCA(tuning_results:Dict[int,tuple]):
     """
