@@ -109,14 +109,14 @@ def get_labels(testing_results:Dict[int,tuple]):
 
     return labels
 
-def execute_estimators(best_estimators:List[Union[GaussianMixture, MeanShift, MySpectralClustring]], model_name:str, max_pca_dim:int, dataset_percentage:float):
+def execute_estimators(best_estimators:List[Union[GaussianMixture, MeanShift, MySpectralClustring]], model_name:str, pca_dimensions:List[int], dataset_percentage:float):
     """
     This function execute the best estimator on the test set.
     """
     results = {}
     i = 0
 
-    X_test, y_test = load_PCA_test_sets(max_pca_dim, dataset_percentage)
+    X_test, y_test = load_PCA_test_sets(pca_dimensions, dataset_percentage)
 
     for dim in tqdm(X_test.keys(), "Executing " + model_name + " .."):
         best_estimator = best_estimators[i]

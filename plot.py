@@ -2,9 +2,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 import pickle
+import os
 
 from utils import load_PCA_2
 from typing import List, Dict
+
+path = os.getcwd() + "/results/"
 
 def plot_digits(iter, X, y):
     fig, axs = plt.subplots(10, iter=15)
@@ -16,7 +19,7 @@ def plot_digits(iter, X, y):
             axs[digit,x].imshow(digit_pixels)
             axs[digit,x].axis('off')
 
-def plot_rand_score_vs_PCA(PCA_dimensions, rand_scores):
+def plot_rand_score_vs_PCA(PCA_dimensions:List[int], rand_scores:List[float], label:str, model_name:str):
     """
     
     """
@@ -27,8 +30,9 @@ def plot_rand_score_vs_PCA(PCA_dimensions, rand_scores):
     ax.set_ylabel("Rand score")
     ax.set_title('Value of the rand score vs PCA dimension', weight = 'bold')
     plt.show()
+    fig.savefig(path + model_name + "/rand_vs_PCA_" + label + ".png")
     
-def plot_training_time_vs_PCA(PCA_dimensions, training_times):
+def plot_training_time_vs_PCA(PCA_dimensions:List[int], training_times:List[float], model_name:str):
     """
     
     """
@@ -39,8 +43,9 @@ def plot_training_time_vs_PCA(PCA_dimensions, training_times):
     ax.set_ylabel("Training time (s)")
     ax.set_title('Training times vs PCA dimension', weight = 'bold')
     plt.show()
+    fig.savefig(path + model_name + "/training_time_vs_PCA.png")
 
-def plot_testing_time_vs_PCA(PCA_dimensions, testing_times):
+def plot_testing_time_vs_PCA(PCA_dimensions:List[int], testing_times:List[float], model_name:str):
     """
     
     """
@@ -51,8 +56,9 @@ def plot_testing_time_vs_PCA(PCA_dimensions, testing_times):
     ax.set_ylabel("Testing time (s)")
     ax.set_title('Testing times vs PCA dimension', weight = 'bold')
     plt.show()
+    fig.savefig(path + model_name + "/testing_time_vs_PCA.png")
 
-def plot_clusters(dataset_percentage:float, n_clusters:int, labels:List):
+def plot_clusters(dataset_percentage:float, n_clusters:int, labels:List[int], model_name:str):
     """
     This function plots the clusters obtained by the model with PCA dimension equal to 2.
 
@@ -62,7 +68,7 @@ def plot_clusters(dataset_percentage:float, n_clusters:int, labels:List):
 
     X, _ = load_PCA_2(dataset_percentage)
         
-    plt.figure(figsize=(20,10))
+    fig = plt.figure(figsize=(20,10))
     plt.clf()
 
     colors = ["#"+''.join([random.choice('0123456789ABCDEF') for j in range(6)]) for i in range(n_clusters)]
@@ -74,8 +80,9 @@ def plot_clusters(dataset_percentage:float, n_clusters:int, labels:List):
         
     plt.title("Number of clusters: %d" % n_clusters, weight = "bold")
     plt.show()
+    fig.savefig(path + model_name + "/clusters.png")
 
-def plot_images_per_cluster(X_test:Dict, pca_dim:int, labels:List, n_clusters:int):
+def plot_images_per_cluster(X_test:Dict, pca_dim:int, labels:List, n_clusters:int, model_name:str):
     """
     This function plots 4 images of each of the obtained clusters, given the PCA dimensions.
     """
@@ -115,3 +122,4 @@ def plot_images_per_cluster(X_test:Dict, pca_dim:int, labels:List, n_clusters:in
     fig.tight_layout()
     fig.subplots_adjust(top=0.95)
     fig.show()
+    fig.savefig(path + model_name + "/images_per_cluster.png")

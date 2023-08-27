@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import pickle
 
+from typing import List
 from sklearn.datasets import fetch_openml
 from pathlib import Path
 from sklearn.model_selection import train_test_split
@@ -57,12 +58,12 @@ def load_PCA_2(dataset_percentage:float):
 
     return X_test, y_test
 
-def load_PCA_train_sets(max_pca_dim:int, dataset_percentage:float):
+def load_PCA_train_sets(pca_dimensions:List[int], dataset_percentage:float):
     """
     This function loads the transformed training datasets from the "dataset/train" folders.
 
     INPUT:
-    - max_pca_dim = int, i.e. the maximum PCA dimension;
+    - pca_dimensions, i.e. the PCA values;
     - dataset_percentage, i.e. the percentage of dataset that is considered.
 
     OUTPUT: (X_train, y_train), where:
@@ -73,17 +74,17 @@ def load_PCA_train_sets(max_pca_dim:int, dataset_percentage:float):
     y_train = pd.read_parquet('dataset/' + str(dataset_percentage) + '/train/y.parquet').squeeze() 
     X_train = {}
     
-    for i in tqdm(range(2,max_pca_dim+10,10), desc="Loading the PCA training datasets.."):
+    for i in tqdm(pca_dimensions, desc="Loading the PCA training datasets.."):
         X_train[i] = pd.read_parquet("dataset/" + str(dataset_percentage) + "/train/X_" + str(i) + ".parquet")
         
     return X_train, y_train
 
-def load_PCA_test_sets(max_pca_dim:int, dataset_percentage:float):
+def load_PCA_test_sets(pca_dimensions:List[int], dataset_percentage:float):
     """
     This function loads the transformed testing datasets from the "dataset/test" folders.
 
     INPUT:
-    - max_pca_dim = int, i.e. the maximum PCA dimension;
+    - pca_dimensions = int, i.e. the PCA values;
     - dataset_percentage, i.e. the percentage of dataset that is considered.
 
     OUTPUT: (X_test, y_test), where:
@@ -94,7 +95,7 @@ def load_PCA_test_sets(max_pca_dim:int, dataset_percentage:float):
     y_test = pd.read_parquet('dataset/' + str(dataset_percentage) + '/test/y.parquet').squeeze() 
     X_test = {}
     
-    for i in tqdm(range(2,max_pca_dim+10,10), desc="Loading the PCA testing datasets.."):
+    for i in tqdm(pca_dimensions, desc="Loading the PCA testing datasets.."):
         X_test[i] = pd.read_parquet("dataset/" + str(dataset_percentage) + "/test/X_" + str(i) + ".parquet")
         
     return X_test, y_test
@@ -123,7 +124,7 @@ def split(X:pd.DataFrame, y:pd.Series, test_size:float):
     X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=test_size)
     return X_train, y_train, X_test, y_test
 
-def apply_PCA(X:pd.DataFrame, y:pd.Series, max_pca_dim:int, dataset_percentage:float, test_size:float):
+def apply_PCA(X:pd.DataFrame, y:pd.Series, pca_dimensions:List[int], dataset_percentage:float, test_size:float):
     """
     This function applies some PCA transformations to a fraction of the MNIST dataset.\nFor the aim of the project, the dataset percentage is set to 50% and the PCA dimension varies from 2 to 200.
     
@@ -143,7 +144,7 @@ def apply_PCA(X:pd.DataFrame, y:pd.Series, max_pca_dim:int, dataset_percentage:f
     X.iloc[indexes].to_parquet("dataset/" + str(dataset_percentage) + "/X.parquet")
     y[indexes].to_frame().to_parquet("dataset/" + str(dataset_percentage) + "/y.parquet")
 
-    for i in tqdm(range(2,max_pca_dim+10,10), desc="Applying PCA transformation.."):
+    for i in tqdm(pca_dimensions, desc = "Applying PCA transformation.."):
         if not Path("dataset/" + str(dataset_percentage) + "/train/X_" + str(i) + ".parquet").is_file() or not Path("dataset/" + str(dataset_percentage) + "/test/X_" + str(i) + ".parquet").is_file():
             pca = PCA(n_components=i)
             

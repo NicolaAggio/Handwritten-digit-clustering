@@ -8,7 +8,7 @@ import pickle
 
 from sklearn.base import ClusterMixin, BaseEstimator
 from statistics import mean
-from typing import Dict
+from typing import Dict, List
 from sklearn.mixture import GaussianMixture
 from sklearn.cluster import MeanShift, SpectralClustering
 from sklearn.model_selection import GridSearchCV, cross_val_score
@@ -116,7 +116,7 @@ def get_results(X_train:Dict[int, pd.DataFrame], y_train:pd.Series, model:GridSe
 
     return res
 
-def tune_model(model_name:str, max_pca_dim:int, dataset_percentage:float):
+def tune_model(model_name:str, max_pca_dim:List[int], dataset_percentage:float):
     """
     This function sets the hyperparameters (names and values) for the provided model.
 
@@ -137,7 +137,7 @@ def tune_model(model_name:str, max_pca_dim:int, dataset_percentage:float):
             model = GridSearchCV(GaussianMixture(covariance_type="diag", random_state=1, max_iter=200), param_grid, scoring="rand_score", refit="rand_score", n_jobs=n_jobs, cv=5, error_score="raise")
             
         case "MeanShift":
-            param_grid = {"bandwidth" : [0.6, 1, 3, 4, 5, 8]}
+            param_grid = {"bandwidth" : [0.6, 1, 3, 4, 5]}
             model = GridSearchCV(MeanShift(n_jobs=n_jobs), param_grid, scoring="rand_score", refit="rand_score", n_jobs=n_jobs, cv=5, error_score="raise")
             
         case "NormalizedCut":
