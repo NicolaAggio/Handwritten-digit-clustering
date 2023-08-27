@@ -7,13 +7,12 @@ import os
 import pickle
 
 from sklearn.base import ClusterMixin, BaseEstimator
-from statistics import mean
 from typing import Dict, List
 from sklearn.mixture import GaussianMixture
 from sklearn.cluster import MeanShift, SpectralClustering
-from sklearn.model_selection import GridSearchCV, cross_val_score
+from sklearn.model_selection import GridSearchCV
 from tqdm.notebook import tqdm
-from utils import load_PCA_train_sets
+from loading import load_PCA_train_sets
 
 class MySpectralClustring(ClusterMixin, BaseEstimator):
     # _parameter_constraints: dict = {
@@ -163,26 +162,5 @@ def save_results(model_name:str, result:Dict[int,tuple]):
     if not os.path.exists(os.getcwd() + "/GridSearch_tuning"):
         os.mkdir(os.getcwd() + "/GridSearch_tuning")
 
-    with open(model_name + '.pkl', "wb") as out:
+    with open(os.getcwd() + "/GridSearch_tuning/" + model_name + '.pkl', "wb") as out:
         pickle.dump(result, out, pickle.HIGHEST_PROTOCOL)
-
-def tune_SpectralClustering(max_pca_dim, dataset_percentage):
-    results = {}
-    X_train, y_train = load_PCA_train_sets(max_pca_dim, dataset_percentage)
-
-    for dim in tqdm(X_train.keys(), "Tuning SpectralClustering" + " .."):
-        results[dim] = {}
-        for n_clusters in [x for x in range(5,16)]:
-            model = SpectralClustering(n_clusters=n_clusters, affinity="nearest_neighbors", n_jobs=-1, random_state=1)
-
-            start_train = time.time()
-            scores = cross_val_score(model, X_train[dim], y_train, cv=5, scoring="rand_score", n_jobs=-1)
-            time_train = time.time() - start_train
-
-            print("PCA dimension = ", dim)
-            print("Number of clusters = ", n_clusters)
-            print("Rand score = ", mean(scores))
-
-            results[dim][n_clusters] = (mean(scores), time_train)
-
-    return results

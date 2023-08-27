@@ -1,10 +1,14 @@
+"""
+This file contains the functions for plotting the results of the training and testing phases.
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import random
 import pickle
 import os
 
-from utils import load_PCA_2
+from loading import load_PCA_2
 from typing import List, Dict
 
 path = os.getcwd() + "/results/"
