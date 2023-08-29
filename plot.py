@@ -8,6 +8,8 @@ import random
 import pickle
 import os
 
+from tqdm import tqdm
+from math import ceil
 from loading import load_PCA_2
 from typing import List, Dict
 
@@ -99,8 +101,12 @@ def plot_images_per_cluster(X_test:Dict, pca_dim:int, labels:List, n_clusters:in
     for item in [item for sublist in axs for item in sublist]:
         item.set_yticklabels([])
         item.set_xticklabels([])
+
+    if n_clusters > 20:
+        print("qua")
+        n_clusters = 20
                 
-    for k in range(n_clusters):
+    for k in tqdm(range(n_clusters), desc=f"Plotting images of PCA {pca_dim}.."):
         my_members = labels == k
         with open("PCA/"+str(pca_dim)+".pkl", 'rb') as inp:
             pca = pickle.load(inp)
@@ -126,4 +132,24 @@ def plot_images_per_cluster(X_test:Dict, pca_dim:int, labels:List, n_clusters:in
     fig.tight_layout()
     fig.subplots_adjust(top=0.95)
     fig.show()
-    fig.savefig(path + model_name + "/images_per_cluster.png")
+    fig.savefig(path + model_name + "/images_per_cluster/" + str(pca_dim) + ".png")
+
+def plot_means(pca_dim:int, means:np.ndarray):
+    with open("PCA/" + str(pca_dim) + ".pkl", 'rb') as inp:
+        pca = pickle.load(inp)
+        
+    data = pca.inverse_transform(means)
+    
+    fig,axs = plt.subplots(ceil(len(means)/4),4)
+    
+    fig.suptitle(f"PCA dimension: {pca_dim}", weight = "bold")
+    
+    axs = [item for sublist in axs for item in sublist]
+    
+    for i in range(len(axs)):
+        axs[i].axis('off')
+        
+    for i,mean in enumerate(data):
+        axs[i].imshow(mean.reshape(28, 28))
+
+    fig.savefig(path + "GaussianMixture" + "/means/" + str(pca_dim) + ".png")
