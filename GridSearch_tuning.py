@@ -15,33 +15,6 @@ from tqdm.notebook import tqdm
 from loading import load_PCA_train_sets
 
 class MySpectralClustring(ClusterMixin, BaseEstimator):
-    # _parameter_constraints: dict = {
-    #     "n_clusters": [Interval(Integral, 1, None, closed="left")],
-    #     "eigen_solver": [StrOptions({"arpack", "lobpcg", "amg"}), None],
-    #     "n_components": [Interval(Integral, 1, None, closed="left"), None],
-    #     "random_state": ["random_state"],
-    #     "n_init": [Interval(Integral, 1, None, closed="left")],
-    #     "gamma": [Interval(Real, 0, None, closed="left")],
-    #     "affinity": [
-    #         callable,
-    #         StrOptions(
-    #             set(KERNEL_PARAMS)
-    #             | {"nearest_neighbors", "precomputed", "precomputed_nearest_neighbors"}
-    #         ),
-    #     ],
-    #     "n_neighbors": [Interval(Integral, 1, None, closed="left")],
-    #     "eigen_tol": [
-    #         Interval(Real, 0.0, None, closed="left"),
-    #         StrOptions({"auto"}),
-    #     ],
-    #     "assign_labels": [StrOptions({"kmeans", "discretize", "cluster_qr"})],
-    #     "degree": [Interval(Integral, 0, None, closed="left")],
-    #     "coef0": [Interval(Real, None, None, closed="neither")],
-    #     "kernel_params": [dict, None],
-    #     "n_jobs": [Integral, None],
-    #     "verbose": ["verbose"],
-    # }
-
     def __init__(
         self,
         n_clusters=8,
@@ -88,6 +61,15 @@ class MySpectralClustring(ClusterMixin, BaseEstimator):
 
 def get_results(X_train:Dict[int, pd.DataFrame], y_train:pd.Series, model:GridSearchCV, model_name:str):
     """
+    This function performs the actual tuning of the hyperparameters for the specified model. We recall that the tuning is performed by using the GridSearchCV library.
+    
+    INPUT:
+    - X_train, i.e. a dictionary {pca_dim : X_train}, for each value of PCA dimension;
+    - y_train, i.e. the training label vector;
+    - model, i.e. the model to be tuned;
+    - model_name, i.e. the name of the model to be tuned.
+
+    OUTPUT: a dictionary in the form {pca_dim : (best_estimator, best_params, best_rand_score, trainig time, n_clusters (only for MeanShift))}.
     """
     res = {}
     
@@ -115,17 +97,21 @@ def get_results(X_train:Dict[int, pd.DataFrame], y_train:pd.Series, model:GridSe
 
     return res
 
-def tune_model(model_name:str, max_pca_dim:List[int], dataset_percentage:float):
+def tune_model(model_name:str, pca_dimensions:List[int], dataset_percentage:float):
     """
     This function sets the hyperparameters (names and values) for the provided model.
 
     INPUT:
-    - 
+    - model_name, i.e. the ame of the model to be tuned;
+    - pca_dimensions, i.e. a list of all the possible PCA dimensions;
+    - dataset_percentage, i.e. the percentage of dataset that is considered.
+
+    OUTPUT: see get_results() function.
     """
     n_jobs = -1
 
     # loading the PCA transformed datasets
-    X_train, y_train = load_PCA_train_sets(max_pca_dim, dataset_percentage)
+    X_train, y_train = load_PCA_train_sets(pca_dimensions, dataset_percentage)
 
     # setting the parameters according to the provided model
     match model_name:

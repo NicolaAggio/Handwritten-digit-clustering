@@ -24,6 +24,10 @@ def load_reduced_dataset(dataset_percentage:float):
     This function loads the reduced dataset from the corresponding folder.
 
     INPUT: dataset_percentage, i.e. the percentage of dataset that is considered.
+
+    OUTPUT:
+    - X, i.e. the feature vector;
+    - y, i.e. the label vector.
     """
     X = pd.read_parquet('dataset/' + str(dataset_percentage) + '/X.parquet')
     y = pd.read_parquet('dataset/' + str(dataset_percentage) + '/y.parquet').squeeze() 
@@ -33,6 +37,10 @@ def load_reduced_dataset(dataset_percentage:float):
 def download_dataset():
     """
     This function downloads the MNIST dataset, if not present in the "dataset" folder, otherwise it loads it from the same folder.
+
+    OUTPUT:
+    - X, i.e. the feature vector;
+    - y, i.e. the label vector.
     """
     if not Path("dataset/X.parquet").is_file() and not Path("dataset/y.parquet").is_file():
         X,y = fetch_openml('mnist_784', version=1, return_X_y=True)
@@ -49,6 +57,10 @@ def download_dataset():
 def load_PCA_2(dataset_percentage:float):
     """
     This function loads the test dataset corresponding to PCA dimension 2 from the corresponding folder.
+
+    OUTPUT:
+    - X_test, i.e. the testing feature vector;
+    - y_test, i.e. the testing label vector.
     """
     y_test = pd.read_parquet('dataset/' + str(dataset_percentage) + '/test/y.parquet').squeeze() 
     X_test = pd.read_parquet("dataset/" + str(dataset_percentage) + "/test/X_2.parquet")
@@ -98,5 +110,12 @@ def load_PCA_test_sets(pca_dimensions:List[int], dataset_percentage:float):
     return X_test, y_test
 
 def load_tuning_results(model_name:str):
+    """
+    This function loads the results of the tuning phase of the giiven model from the "GridSearch_tuning/" folder.
+
+    INPUT: model_name, i.e. the model;
+
+    OUTPUT: tuning results of the specified model.
+    """
     with open("GridSearch_tuning/" + model_name + ".pkl","rb") as file:
         return pickle.load(file)

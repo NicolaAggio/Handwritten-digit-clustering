@@ -15,19 +15,16 @@ from typing import List, Dict
 
 path = os.getcwd() + "/results/"
 
-def plot_digits(iter, X, y):
-    fig, axs = plt.subplots(10, iter=15)
-    
-    for digit in range(10):
-        for x in range(iter):
-            digit_index = y[y == digit].index[x]
-            digit_pixels = np.array(X.iloc[digit_index]).reshape(28, 28)
-            axs[digit,x].imshow(digit_pixels)
-            axs[digit,x].axis('off')
 
 def plot_rand_score_vs_PCA(PCA_dimensions:List[int], rand_scores:List[float], label:str, model_name:str):
     """
-    
+    This function plots the rand scores obtained by a model w.r.t. the different values of PCA dimensions.
+
+    INPUT:
+    - PCA_dimensions, i.e. the list of all possible values of PCA dimension;
+    - rand_scores, i.e. the list of obtained rand scores;
+    - label, i.e. indication of the rand scores (training or testing);
+    - model_name, i.e. the name of the model.
     """
     fig, ax = plt.subplots(figsize=(10,5))
     ax.plot(PCA_dimensions, rand_scores,'-*' , color = 'blue')
@@ -40,7 +37,12 @@ def plot_rand_score_vs_PCA(PCA_dimensions:List[int], rand_scores:List[float], la
     
 def plot_training_time_vs_PCA(PCA_dimensions:List[int], training_times:List[float], model_name:str):
     """
-    
+    This function plots the training times of a model w.r.t. the different values of PCA dimensions.
+
+    INPUT:
+    - PCA_dimensions, i.e. the list of all possible values of PCA dimension;
+    - training_times, i.e. the list of training times;
+    - model_name, i.e. the name of the model.
     """
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(PCA_dimensions, training_times,'-*' , color = 'red')
@@ -53,7 +55,12 @@ def plot_training_time_vs_PCA(PCA_dimensions:List[int], training_times:List[floa
 
 def plot_testing_time_vs_PCA(PCA_dimensions:List[int], testing_times:List[float], model_name:str):
     """
-    
+    This function plots the testing times of a model w.r.t. the different values of PCA dimensions.
+
+    INPUT:
+    - PCA_dimensions, i.e. the list of all possible values of PCA dimension;
+    - testing_times, i.e. the list of testing times;
+    - model_name, i.e. the name of the model.
     """
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(PCA_dimensions, testing_times,'-*' , color = 'red')
@@ -69,7 +76,10 @@ def plot_clusters(dataset_percentage:float, n_clusters:int, labels:List[int], mo
     This function plots the clusters obtained by the model with PCA dimension equal to 2.
 
     INPUT:
-    - 
+    - dataset_percentage, i.e. the percentage of dataset that is used;
+    - n_clusters, i.e. the number of obtained clusters;
+    - labels, i.e. the label of each of the clustered points;
+    - model_name, i.e. the name of the model.
     """
 
     X, _ = load_PCA_2(dataset_percentage)
@@ -91,6 +101,13 @@ def plot_clusters(dataset_percentage:float, n_clusters:int, labels:List[int], mo
 def plot_images_per_cluster(X_test:Dict, pca_dim:int, labels:List, n_clusters:int, model_name:str):
     """
     This function plots 4 images of each of the obtained clusters, given the PCA dimensions.
+
+    INPUT:
+    - X_test, i.e. {pca_dim : X_test};
+    - pca_dim, i.e. the PCA dimension;
+    - labels, i.e. the label of each of the clustered points;
+    - n_clusters, i.e. the number of obtained clusters;
+    - model_name, i.e. the name of the model.
     """
 
     fig,axs = plt.subplots(n_clusters, 4, figsize = (4*2, n_clusters*2))
@@ -135,6 +152,13 @@ def plot_images_per_cluster(X_test:Dict, pca_dim:int, labels:List, n_clusters:in
     fig.savefig(path + model_name + "/images_per_cluster/" + str(pca_dim) + ".png")
 
 def plot_means(pca_dim:int, means:np.ndarray):
+    """
+    This function plots the means obtained by the MeanShift algorithm with the specified PCA dimension.
+
+    INPUT:
+    - pca_dim, i.e. the PCA dimension;
+    - means, i.e. the means for each of the clustered points.
+    """
     with open("PCA/" + str(pca_dim) + ".pkl", 'rb') as inp:
         pca = pickle.load(inp)
         
